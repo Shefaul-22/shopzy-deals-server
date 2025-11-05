@@ -8,15 +8,14 @@ const port = process.env.PORT || 3000;
 app.use(cors())
 app.use(express.json())
 
-// const uri = "mongodb+srv://shopzydbUser:yhQwHLm8yEsEdTf0@crud-server-practices.rbtbow5.mongodb.net/?appName=crud-server-practices";
+
 
 require('dotenv').config();
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/?appName=crud-server-practices`;
 
 
-// shopzydbUser
-// yhQwHLm8yEsEdTf0
+
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
