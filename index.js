@@ -8,8 +8,6 @@ const port = process.env.PORT || 3000;
 app.use(cors())
 app.use(express.json())
 
-
-
 require('dotenv').config();
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/?appName=crud-server-practices`;
@@ -38,13 +36,34 @@ async function run() {
 
         const db = client.db('smart-db')
         const productsCollection = db.collection('products');
+        const bidsCollection = db.collection('bids');
+        const usersCollection = db.collection('users')
 
+        // Users related apis here
+        app.post('/users', async (req, res) => {
+            const newUser = req.body;
+
+            const email = req.body.email;
+            const query = { email: email }
+            const existingUser = await usersCollection.findOne(query)
+            if (existingUser) {
+                res.send({ message: 'Users already exists' })
+            }
+            else {
+
+                const result = await usersCollection.insertOne(newUser)
+                res.send(result)
+            }
+
+        })
+
+        // Products apis
         app.get('/products', async (req, res) => {
 
             console.log(req.query)
             const email = req.query.email;
             const query = {}
-            if(email){
+            if (email) {
                 query.email = email;
             }
 
@@ -53,13 +72,38 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/products/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await productsCollection.findOne(query);
-            res.send(result)
+        app.get('/latest-products', async (req, res) => {
 
+            const cursor = productsCollection.find().sort({ created_at: -1 }).limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
         })
+
+        // app.get('/products/:id', async (req, res) => {
+        //     const id = req.params.id;
+        //     const query = { _id: new ObjectId(id) }
+        //     const result = await productsCollection.findOne(query);
+        //     res.send(result)
+
+        // })
+
+        app.get("/products/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const query = { _id: id };
+                const result = await productsCollection.findOne(query);
+
+                if (!result) {
+                    return res.status(404).send({ message: "Product not found" });
+                }
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Server error" });
+            }
+        });
+
 
         app.post('/products', async (req, res) => {
             const newProduct = req.body;
@@ -82,7 +126,7 @@ async function run() {
         })
 
         // app.delete('/products', async (req, res) => {
-            
+
         //     const result = await productsCollection.deleteMany({})
         //     res.send(result);
         // })
@@ -95,6 +139,31 @@ async function run() {
         })
 
 
+        // bids related apis here
+        app.get('/bids', async (req, res) => {
+            const email = req.query.email;
+            // console.log(email)
+            const query = {}
+            if (email) {
+                query.buyer_email = email
+            }
+            const cursor = bidsCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.post('/bids', async (req, res) => {
+            const newBid = req.body;
+            const result = await bidsCollection.insertOne(newBid);
+            res.send(result);
+        })
+
+        app.delete('/bids/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await bidsCollection.deleteOne(query)
+            req.send(result);
+        })
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     }
