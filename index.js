@@ -152,6 +152,26 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/products/bids/:productId', async (req, res) => {
+            const productId = req.params.productId;
+            const query = { product: productId }
+            const cursor = bidsCollection.find(query).sort({ bid_price: -1 })
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.get('/bids', async (req, res) => {
+
+            const query = {};
+            if (query.email) {
+                query.buyer_email = email;
+            }
+
+            const cursor = bidsCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
         app.post('/bids', async (req, res) => {
             const newBid = req.body;
             const result = await bidsCollection.insertOne(newBid);
@@ -162,7 +182,7 @@ async function run() {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await bidsCollection.deleteOne(query)
-            req.send(result);
+            res.send(result);
         })
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
