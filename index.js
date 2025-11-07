@@ -4,10 +4,54 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Firebase admin
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./shopzy-deals-firebase-adminsdk.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
 // Middleware
 app.use(cors())
 app.use(express.json())
 
+const logger = (req, res, next) => {
+    console.log('logging information')
+    next();
+}
+
+const verifyFirebaseToken = async(req, res, next) => {
+    console.log('verify firebase token', req.headers.authorization)
+
+    if(!req.headers.authorization){
+        // do not allow to go
+        return res.status(401).send({message: 'unauthorized access'})
+
+    }
+
+    const token = req.headers.authorization.split(' ')[1]
+    if(!token){
+        return res.status(401).send({message: 'unautorized access'})
+    }
+
+    // verify token
+
+    try{
+        const userInfo = await admin.auth().verifyIdToken(token);
+        console.log('After token validation', userInfo)
+        next();
+    }
+    catch{
+        return res.status(401).send({message: 'unautorized access'})
+    }
+
+    // 
+    
+}
+// For hiding secrity key using dotenv
 require('dotenv').config();
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/?appName=crud-server-practices`;
@@ -140,7 +184,8 @@ async function run() {
 
 
         // bids related apis here
-        app.get('/bids', async (req, res) => {
+        app.get('/bids', logger,verifyFirebaseToken, async (req, res) => {
+            // console.log('headers',req.headers)
             const email = req.query.email;
             // console.log(email)
             const query = {}
@@ -160,17 +205,17 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/bids', async (req, res) => {
+        // app.get('/bids', async (req, res) => {
 
-            const query = {};
-            if (query.email) {
-                query.buyer_email = email;
-            }
+        //     const query = {};
+        //     if (query.email) {
+        //         query.buyer_email = email;
+        //     }
 
-            const cursor = bidsCollection.find(query);
-            const result = await cursor.toArray();
-            res.send(result);
-        })
+        //     const cursor = bidsCollection.find(query);
+        //     const result = await cursor.toArray();
+        //     res.send(result);
+        // })
 
         app.post('/bids', async (req, res) => {
             const newBid = req.body;
